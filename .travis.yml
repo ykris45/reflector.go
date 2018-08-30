@@ -91,5 +91,5 @@ deploy:
     file: prism-bin
     on:
       repo: lbryio/reflector.go
-      tags: true
       condition: "$DEPLOY = true"
+      all_branches: true

@@ -46,7 +46,6 @@ func NewHandler(onReceive func(*Webhook), onError func(error)) http.HandlerFunc 
 		payload.Success = payload.Status == statusSuccess
 
 		go onReceive(payload)
-		return
 	}
 }
 
@@ -55,7 +54,7 @@ const (
 	privateConfURL = "https://api.travis-ci.com/config"
 )
 
-func publicKey(publicTravis bool) (*rsa.PublicKey, error) {
+func publicKey(publicTravis bool) (k *rsa.PublicKey, err error) {
 	var url string
 	if publicTravis {
 		url = publicConfURL
@@ -63,11 +62,16 @@ func publicKey(publicTravis bool) (*rsa.PublicKey, error) {
 		url = privateConfURL
 	}
 
-	response, err := http.Get(url)
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, errors.New("cannot fetch travis public key")
 	}
-	defer response.Body.Close()
+	defer func() {
+		err2 := resp.Body.Close()
+		if err == nil {
+			err = err2
+		}
+	}()
 
 	type configKey struct {
 		Config struct {
@@ -81,7 +85,7 @@ func publicKey(publicTravis bool) (*rsa.PublicKey, error) {
 
 	var t configKey
 
-	decoder := json.NewDecoder(response.Body)
+	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&t)
 	if err != nil {
 		return nil, errors.New("cannot decode travis public key")
@@ -151,7 +155,7 @@ func isPublic(r *http.Request) (bool, error) {
 }
 
 type Webhook struct {
-	Success bool `json:-`
+	Success bool `json:"-"`
 
 	ID                int       `json:"id"`
 	Number            string    `json:"number"`

@@ -41,7 +41,12 @@ func GithubSelfUpdateHandler(url string, onError func(error)) http.HandlerFunc {
 		if err != nil {
 			onError(err)
 		}
-		defer resp.Body.Close()
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				onError(err)
+			}
+		}()
 
 		err = update.Apply(resp.Body, update.Options{})
 		if err != nil {
